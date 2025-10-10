@@ -8,6 +8,9 @@ import {
   Heart,
   FileText,
   Shield,
+  Calendar,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 const PatientModal = ({ patient, mode, onClose, onSave }) => {
@@ -19,6 +22,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
     email: "",
     address: "",
     emergencyContact: "",
+    emergencyContactPhone: "",
     bloodGroup: "A+",
     allergies: [],
     medicalHistory: [],
@@ -29,6 +33,16 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
       expiryDate: "",
     },
     status: "Active",
+    admissionDate: new Date().toISOString().split("T")[0],
+    assignedDoctor: "",
+    assignedWard: "",
+    primaryCondition: "",
+    height: "",
+    weight: "",
+    occupation: "",
+    maritalStatus: "Single",
+    nationality: "",
+    language: "English",
   });
 
   const [newAllergy, setNewAllergy] = useState("");
@@ -37,31 +51,38 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
   useEffect(() => {
     if (patient) {
       setFormData(patient);
+    } else {
+      // Set default values for new patient
+      setFormData((prev) => ({
+        ...prev,
+        admissionDate: new Date().toISOString().split("T")[0],
+      }));
     }
   }, [patient]);
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleInsuranceChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      insurance: {
-        ...prev.insurance,
+    if (field.includes(".")) {
+      const [parent, child] = field.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
         [field]: value,
-      },
-    }));
+      }));
+    }
   };
 
   const handleAddAllergy = () => {
     if (newAllergy.trim()) {
       setFormData((prev) => ({
         ...prev,
-        allergies: [...(prev.allergies || []), newAllergy.trim()],
+        allergies: [...prev.allergies, newAllergy.trim()],
       }));
       setNewAllergy("");
     }
@@ -70,7 +91,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
   const handleRemoveAllergy = (index) => {
     setFormData((prev) => ({
       ...prev,
-      allergies: prev.allergies?.filter((_, i) => i !== index) || [],
+      allergies: prev.allergies.filter((_, i) => i !== index),
     }));
   };
 
@@ -78,10 +99,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
     if (newMedicalCondition.trim()) {
       setFormData((prev) => ({
         ...prev,
-        medicalHistory: [
-          ...(prev.medicalHistory || []),
-          newMedicalCondition.trim(),
-        ],
+        medicalHistory: [...prev.medicalHistory, newMedicalCondition.trim()],
       }));
       setNewMedicalCondition("");
     }
@@ -90,7 +108,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
   const handleRemoveMedicalCondition = (index) => {
     setFormData((prev) => ({
       ...prev,
-      medicalHistory: prev.medicalHistory?.filter((_, i) => i !== index) || [],
+      medicalHistory: prev.medicalHistory.filter((_, i) => i !== index),
     }));
   };
 
@@ -101,11 +119,21 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
 
   const isReadOnly = mode === "view";
 
+  const calculateBMI = () => {
+    if (formData.height && formData.weight) {
+      const heightInMeters = formData.height / 100;
+      return (formData.weight / (heightInMeters * heightInMeters)).toFixed(1);
+    }
+    return null;
+  };
+
+  const bmi = calculateBMI();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <User className="w-6 h-6 text-blue-600" />
@@ -143,10 +171,10 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                 <User className="w-5 h-5 mr-2 text-blue-600" />
                 Personal Information
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
+                    Full Name *
                   </label>
                   <input
                     type="text"
@@ -159,7 +187,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Age
+                    Age *
                   </label>
                   <input
                     type="number"
@@ -170,11 +198,13 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
                     required
+                    min="0"
+                    max="150"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
+                    Gender *
                   </label>
                   <select
                     value={formData.gender}
@@ -211,6 +241,47 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     <option value="O-">O-</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Height (cm)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.height}
+                    onChange={(e) =>
+                      handleInputChange("height", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Weight (kg)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.weight}
+                    onChange={(e) =>
+                      handleInputChange("weight", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                {bmi && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      BMI
+                    </label>
+                    <input
+                      type="text"
+                      value={bmi}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -223,7 +294,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
@@ -244,7 +315,6 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
-                    required
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -261,9 +331,19 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
                   />
                 </div>
-                <div className="md:col-span-2">
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Heart className="w-5 h-5 mr-2 text-red-600" />
+                Emergency Contact
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Emergency Contact
+                    Emergency Contact Name
                   </label>
                   <input
                     type="text"
@@ -272,7 +352,20 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                       handleInputChange("emergencyContact", e.target.value)
                     }
                     disabled={isReadOnly}
-                    placeholder="Name - Phone Number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Emergency Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.emergencyContactPhone}
+                    onChange={(e) =>
+                      handleInputChange("emergencyContactPhone", e.target.value)
+                    }
+                    disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
                   />
                 </div>
@@ -282,7 +375,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
             {/* Medical Information */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Heart className="w-5 h-5 mr-2 text-red-600" />
+                <FileText className="w-5 h-5 mr-2 text-purple-600" />
                 Medical Information
               </h3>
 
@@ -304,11 +397,16 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                           onClick={() => handleRemoveAllergy(index)}
                           className="ml-2 text-red-500 hover:text-red-700"
                         >
-                          ×
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       )}
                     </span>
                   ))}
+                  {formData.allergies?.length === 0 && (
+                    <span className="text-sm text-gray-500">
+                      No allergies recorded
+                    </span>
+                  )}
                 </div>
                 {!isReadOnly && (
                   <div className="flex space-x-2">
@@ -322,16 +420,17 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     <button
                       type="button"
                       onClick={handleAddAllergy}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
                     >
-                      Add
+                      <Plus className="w-4 h-4" />
+                      <span>Add</span>
                     </button>
                   </div>
                 )}
               </div>
 
               {/* Medical History */}
-              <div>
+              <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Medical History
                 </label>
@@ -348,11 +447,16 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                           onClick={() => handleRemoveMedicalCondition(index)}
                           className="ml-2 text-blue-500 hover:text-blue-700"
                         >
-                          ×
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       )}
                     </span>
                   ))}
+                  {formData.medicalHistory?.length === 0 && (
+                    <span className="text-sm text-gray-500">
+                      No medical conditions recorded
+                    </span>
+                  )}
                 </div>
                 {!isReadOnly && (
                   <div className="flex space-x-2">
@@ -366,19 +470,37 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     <button
                       type="button"
                       onClick={handleAddMedicalCondition}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
                     >
-                      Add
+                      <Plus className="w-4 h-4" />
+                      <span>Add</span>
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Primary Condition */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Primary Medical Condition
+                </label>
+                <input
+                  type="text"
+                  value={formData.primaryCondition}
+                  onChange={(e) =>
+                    handleInputChange("primaryCondition", e.target.value)
+                  }
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  placeholder="Main reason for admission/visit"
+                />
               </div>
             </div>
 
             {/* Insurance Information */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <Shield className="w-5 h-5 mr-2 text-purple-600" />
+                <Shield className="w-5 h-5 mr-2 text-indigo-600" />
                 Insurance Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -390,7 +512,7 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     type="text"
                     value={formData.insurance?.provider}
                     onChange={(e) =>
-                      handleInsuranceChange("provider", e.target.value)
+                      handleInputChange("insurance.provider", e.target.value)
                     }
                     disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
@@ -404,7 +526,10 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     type="text"
                     value={formData.insurance?.policyNumber}
                     onChange={(e) =>
-                      handleInsuranceChange("policyNumber", e.target.value)
+                      handleInputChange(
+                        "insurance.policyNumber",
+                        e.target.value
+                      )
                     }
                     disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
@@ -418,13 +543,14 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     type="number"
                     value={formData.insurance?.coverage}
                     onChange={(e) =>
-                      handleInsuranceChange(
-                        "coverage",
+                      handleInputChange(
+                        "insurance.coverage",
                         parseInt(e.target.value)
                       )
                     }
                     disabled={isReadOnly}
                     max="100"
+                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
                   />
                 </div>
@@ -436,7 +562,115 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
                     type="date"
                     value={formData.insurance?.expiryDate}
                     onChange={(e) =>
-                      handleInsuranceChange("expiryDate", e.target.value)
+                      handleInputChange("insurance.expiryDate", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Admission Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-orange-600" />
+                Admission Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Admission Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.admissionDate}
+                    onChange={(e) =>
+                      handleInputChange("admissionDate", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Assigned Doctor
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.assignedDoctor}
+                    onChange={(e) =>
+                      handleInputChange("assignedDoctor", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Assigned Ward
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.assignedWard}
+                    onChange={(e) =>
+                      handleInputChange("assignedWard", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <User className="w-5 h-5 mr-2 text-teal-600" />
+                Additional Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Occupation
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.occupation}
+                    onChange={(e) =>
+                      handleInputChange("occupation", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Marital Status
+                  </label>
+                  <select
+                    value={formData.maritalStatus}
+                    onChange={(e) =>
+                      handleInputChange("maritalStatus", e.target.value)
+                    }
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                  >
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nationality
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nationality}
+                    onChange={(e) =>
+                      handleInputChange("nationality", e.target.value)
                     }
                     disabled={isReadOnly}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
@@ -447,18 +681,18 @@ const PatientModal = ({ patient, mode, onClose, onSave }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-4 px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-end space-x-4 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               {isReadOnly ? "Close" : "Cancel"}
             </button>
             {!isReadOnly && (
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {mode === "add" ? "Add Patient" : "Update Patient"}
               </button>
