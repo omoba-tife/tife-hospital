@@ -38,6 +38,38 @@ const DoctorManagement = ({ user }) => {
     useState(null);
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
 
+  // Move the function to the top to avoid reference errors
+  const getAvailabilityStatus = (doctor) => {
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+    const currentTime = new Date().getHours() * 100 + new Date().getMinutes();
+
+    const todaySchedule = doctor.availability.find(
+      (schedule) => schedule.day === today
+    );
+
+    if (!todaySchedule || !todaySchedule.isAvailable) {
+      return {
+        status: "Not Available",
+        color: "bg-red-100 text-red-700 border-red-200",
+      };
+    }
+
+    const startTime = parseInt(todaySchedule.startTime.replace(":", ""));
+    const endTime = parseInt(todaySchedule.endTime.replace(":", ""));
+
+    if (currentTime >= startTime && currentTime <= endTime) {
+      return {
+        status: "Available Now",
+        color: "bg-green-100 text-green-700 border-green-200",
+      };
+    } else {
+      return {
+        status: "Off Duty",
+        color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      };
+    }
+  };
+
   const [doctors, setDoctors] = useState([
     {
       id: "1",
@@ -370,37 +402,6 @@ const DoctorManagement = ({ user }) => {
         }`}
       />
     ));
-  };
-
-  const getAvailabilityStatus = (doctor) => {
-    const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-    const currentTime = new Date().getHours() * 100 + new Date().getMinutes();
-
-    const todaySchedule = doctor.availability.find(
-      (schedule) => schedule.day === today
-    );
-
-    if (!todaySchedule || !todaySchedule.isAvailable) {
-      return {
-        status: "Not Available",
-        color: "bg-red-100 text-red-700 border-red-200",
-      };
-    }
-
-    const startTime = parseInt(todaySchedule.startTime.replace(":", ""));
-    const endTime = parseInt(todaySchedule.endTime.replace(":", ""));
-
-    if (currentTime >= startTime && currentTime <= endTime) {
-      return {
-        status: "Available Now",
-        color: "bg-green-100 text-green-700 border-green-200",
-      };
-    } else {
-      return {
-        status: "Off Duty",
-        color: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      };
-    }
   };
 
   const handleAddDoctor = () => {
