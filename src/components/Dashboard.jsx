@@ -4,7 +4,7 @@ import Header from "./Header";
 import DashboardHome from "./DashboardHome";
 import PatientManagement from "./PatientManagement";
 import DoctorManagement from "./DoctorManagement";
-import AppointmentManagement from "./appointmentManagement";
+import AppointmentManagement from "./AppointmentManagement";
 import BillingManagement from "./billingManagement";
 import PharmacyManagement from "./PharmacyManagement";
 import LabManagement from "./LabManagement";
